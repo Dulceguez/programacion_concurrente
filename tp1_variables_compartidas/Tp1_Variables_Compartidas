@@ -1,0 +1,228 @@
+1.  Si se ejecuta:
+        Caso 1: P1 --> P2 --> P3
+                x = 56 
+        Caso 2: P1 --> P3 --> P2
+                x = 52
+        Caso 3: P2 --> P3 --> P1
+                x = 1
+        Caso 4: P2 --> P1 --> P3    
+                x = 51
+        Caso 5: P3 --> P1 --> P2
+                x = 2
+
+    a) En algun caso el valor de x al terminar el programa es 56 ✔️
+
+2.  Precondiciones:
+    * Tener una variable contador para contar las veces que
+    aparece N en el vector inicializada en 0 (cont = 0)
+    * Tener una variable indice para indicar la posicion 
+    actual de vector inicializada en 0 (i = 0)
+    * v es el arreglo de longitud M
+    * N es el numero a contar
+
+    int i = 0, cont = 0, j;
+    while(true) {
+
+        < await (i < M) ; 
+                j = i;    // guardo para no trabajar directamente 
+                         //  con variable compartida
+                i++; 
+        >
+
+        if (j >= M) break;
+
+        if (v[j] == N) {
+            < cont++; >
+        }        
+    }
+    
+
+3. a.   Toda operacion que accede a datos compartidos debe 
+        estar en la seccion critica <> 
+
+        int cant = 0, pri_ocupada = 0, pri_vacia = 0, buffer [N];
+
+        Process Productor {
+            while (true) {
+                produce elemento
+                <await (cant < N) ; 
+                        cant ++;
+                        buffer[pri_vacia] = elemento;
+                        pri_vacia = (pri_vacia + 1) mod N; 
+                >
+            }
+        }
+
+        Process Consumidor {
+            while (true) {
+                <await (cant > 0) ;
+                        cant--;
+                        elemento = buffer[pri_ocupada];
+                        pri_ocupada = (pri3_ocupada + 1) mod N; 
+                >
+                consume elemento // va fuera de <> porque no 
+                                // usa datos compartidos
+            }
+        }
+
+
+    b. Para que funcione con C consumidores y P productores
+       se definen multples instancias de los procesos:
+                    
+                    Process Productor[id: 0..P-1]
+                    Process Consumidor[id: 0..C-1]
+
+       Manteniendo el mismo codigo para cada proceso, ya que 
+       la sincronizacion y exclusion mutua estan garantizadas 
+       mediante las secciones criticas <> sobre las variables
+       compartidas.
+
+4.  Queue sistema_operativo(recursos, 5); // cargada con 5 recursos
+    int recursos = 5;
+
+    Process Proceso[id: 0..N-1] {
+        while (true) {
+
+            <await (recursos > 0) ;
+                    Recurso r = pop(sistema_operativo);
+                    recursos--;
+            >
+
+            uso(r); // uso recurso
+
+            <
+            push(sistemas_operativos, r)
+            recursos++;
+            >
+        }
+    }
+
+5.  a.  boolean libre = true;
+
+        Process Persona[id: 0..N-1] {
+
+            < await (libre) ;
+                    libre = false;
+            >
+
+            Imprimir(documento);
+
+            < libre = true; >
+        }
+
+    b.  colaOrdenada C;
+        int Siguiente = -1;
+        
+        Process Persona[id: 0..N-1] {
+
+            <if (Siguiente == -1) // si nadie esta usando la impresora
+                Siguiente = id
+            else Agregar(C, id); > // espero en la colaOrdenada
+           
+            <await (Siguiente == id);>
+
+            Imprimir(documento);
+
+            <if (empty(C)) Siguiente = -1 
+             else Siguiente = Sacar(C); >
+        }
+
+    c.   
+
+    d.  int Siguiente = -1;
+        
+        Process Persona[id: 0..N-1] {
+            <await (Siguiente == id)>
+
+            Imprimir(documento);
+
+            <Siguiente = id + 1;>
+
+        }
+    
+    e.  colaOrdenada C;
+        int Actual = -1;
+        bool Listo = False;
+
+        Process Persona[id: 0..N-1] {
+            Agregar(C, id);
+
+            <await (Actual == id)>
+
+            Imprimir(documento);
+
+            <Listo = false;>
+        }
+
+        Process Coordinador {
+        
+            while (true) {
+                <await (not empty(C)); 
+                        Actual = Sacar(C); >
+                
+                Listo = true; // ?? no entiendo no se pisan ?
+                < await (not Listo); >
+            }
+        }
+
+6.  int cont = 0, notas[0:P-1];
+    Queue queue;
+    bool listo[0:P-1] = ([P-1], false); 
+
+
+    Process Alumno[id: 0..P-1] {
+        < cont++;>
+        <await (cont == P)>
+
+        resolverExamen(Examen);
+
+        <Agregar(C, id); >
+
+        <await (listo[id] == true)>
+
+        reciboNota(notas[id]);
+    }
+
+    Process Profesor[id: 0..2] {
+        while (true) {
+            <await(not empty(queue));
+                int id = Sacar(queue);>
+            
+            int nota = corregir(id);
+            <notas[id] = nota;>
+            <listo[id] = true;>
+            
+            // deberia tener un vector de Examenes, donde 
+            // los alumnos dejen sus examenes ahi para que 
+            // el profesor lo corrija?
+        }
+    }
+
+7.  // no entendi xd
+
+8.  int arribo[1:N] = ([N] 0), continuar[1:N] = ([N] 0);
+
+    Process SC[id: 1..N]{
+        while (true) {
+            arribo[id] = 1; // pide entrar
+            while (continuar[id] == 0) skip;
+
+            // SECCION CRITICA
+
+            continuar[id] = 0; // libera permiso
+            arribo[id] = 0; // avisa que termino
+        }
+    }
+
+    Process Coordinador {
+        while(true){
+            for[i = 1 to N] {
+                
+                if (arribo[i] == 1) continuar[i] = 1; // da permiso
+                
+                while (continuar[id] == 1) skip; // espera que termine
+                
+            }
+           
+        }
+    }

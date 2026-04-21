@@ -1,0 +1,169 @@
+1.  Queue sistema_operativo(recursos, 5); // 5 recursos
+    int recursos = 5;
+
+    sem mutex_recursos = 1;
+    sem mutex_cola = 1;
+
+    Process Proceso[id: 0..P-1] {
+        Recurso r;
+
+        while(true) {
+            P(mutex_recursos);
+            if (recursos > 0) {
+                recursos--;
+                V(mutex_recursos);
+
+                P(mutex_recursos);
+                pop(sistema_operativo, r);
+                V(mutex_recursos);
+
+                -- uso recurso
+
+                P(mutex_cola);
+                push(sistema_operativo, r);
+                V(mutex_cola);
+
+                P(mutex_recursos);
+                recursos++;
+                V(mutex_recursos);
+
+            } else V(mutex_recursos);   
+        }
+    }
+
+2.  a. Procesos:
+        * Persona [0..N-1]
+       Semaforos:
+        * 1 semaforo --> detector de metales
+       
+    b.  sem detector = 1;
+
+        Process Persona[id: 0..N-1] {
+            P(detector);
+
+            -- pasar por detector --
+
+            V(detector);
+        }
+
+    c.  sem detectores = 3;
+
+        Process Persona[id: 0..N-1] {
+            P(detectores);
+
+            -- pasar por detector --
+
+            V(detectores);
+        }
+
+3.  a.  Fallo historial[N]; // historial de fallos
+        int cant = N / 4;   // divido el historial por cantidad de procesos
+
+        Process Proceso[id: 0..3] {
+            int ini = id * cant;
+            int fin = ini + cant;
+
+            for i = ini..fin {
+                if (historial[i].nivel_gravedad == 3){
+                    imprimir(historial[i].ID);
+                }
+            }
+        }
+
+    b.  Fallo historial[N]; // historial de fallos
+        int cant = N / 4, resultados[4] = ([4] 0);
+        sem mutex_resultados[4] = ([4] 1);
+
+        Process Proceso[id: 0..3] {
+            int contador[cant] = ([cant] 0);
+
+            int ini = id * cant;
+            int fin = ini + cant;
+
+            for i = ini..fin {
+
+                int nivel = historial[i].nivel_gravedad;
+                contador[nivel]++;
+            }
+
+            for i = 0..3 {
+                if (contador[i] > 0) { // si hay fallos, los sumo en vector global
+
+                    P(mutex_resultados[nivel]);
+                    resultados[nivel] = contador[nivel];
+                    V(mutex_resultados[nivel]);
+                }
+            }
+        
+        }
+
+    c.  Fallo historial[N]; // historial de fallos
+        int resultados[4] = ([4] 0); 
+
+        Process Proceso[id: 0..3] {
+            int cont = 0;
+
+            for i = 1..N {
+
+                if (historial[i].nivel_gravedad == id) {
+                    cont++;
+                }
+            }
+            resultados[id] = cont;
+        }
+
+4.  a.  Paquete contenedores[N];
+        int ocupado = 0, libre = 0;
+        sem vacio = n, lleno = 0;
+
+        Process Preparador { // productor
+            while(true) {
+                Paquete p = prepararPaquete();
+
+                P(vacio); 
+                contenedores[libre] = p;
+                libre = (libre + 1) mod N;
+                V(lleno); // depositar
+            }
+        }
+
+        Process Entregador {  // consumidor
+            while(true){
+                P(lleno); 
+                Paquete p = contenedores[ocupado];
+                ocupado = (ocupado + 1) mod N;
+                V(vacio); // retirar
+
+                // entregar paquete
+            }
+        }
+
+    b.  Paquete contenedores[N];
+        int ocupado = 0, libre = 0;
+        sem vacio = n, lleno = 0, mutexD = 1, mutexR = 1;
+
+        Process Preparador[id: 0..P-1] {
+            while(true) {
+                Paquete p = prepararPaquete();
+
+                P(vacio);
+                P(mutexD); contenedores[libre] = p;
+                libre = (libre + 1) mod N; 
+                V(mutexD);
+                V(lleno); // depositar
+            }
+        }
+
+        Process Entregador[id: 0..E-1] {
+            while(true){
+                P(lleno);
+                P(mutexR); resultado = contenedores[ocupado];
+                ocupado = (ocupado + 1) mod N;
+                V(mutexR);
+                V(vacio);
+                
+                // entregar paquete 
+            }
+        }
+
+5.  
