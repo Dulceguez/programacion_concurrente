@@ -39,3 +39,15 @@ Repositorio correspondiente a la materia **Programación Concurrente**, donde se
 
 Este repositorio contiene trabajos prácticos, ejercicios y ejemplos desarrollados durante la cursada de la materia.
 
+---
+
+# 📂 Estructura del repositorio
+
+Cada trabajo práctico está organizado siguiendo una **estructura común**, con el objetivo de mantener orden, facilitar el estudio y separar claramente teoría, práctica y resoluciones.
+
+TPX/
+├── Enunciados/
+├── Explicacion/
+├── Resoluciones/
+└── README.md
+
