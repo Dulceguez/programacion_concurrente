@@ -1,0 +1,409 @@
+1.  a.  Si, el codigo funciona correctamente. El problema solo 
+        exige que "pueda pasar un solo auto a la vez". La 
+        solucion cumple esto porque:
+        * La variable compartida cant representa la cantidad de
+        autos en el puente.
+        * Antes de pasar por el puente, cada auto ejecuta 
+        
+        while (cant > 0) wait(cola); :
+        * Si hay auto en el puente (cant = 1) el resto espera.
+        * Solo cuando cant = 0, un auto puede continuar.
+        
+        Al entrar --> cant = cant + 1 :
+        * Cant pasa a 1 bloqueando a los demas
+        
+        Al salir --> cant = cant - 1; signal(cola); :
+        * El puente se libera (cant = 0) y se despierta a un
+        auto en espera
+        
+        El monitor asegura exclusion mutua: 
+        Nunca hay mas de un auto en el puente al mismo tiempo
+
+    b.  Si, el programa puede simplificarse. No es necesario
+        usar monitor, multiples procedimientos ni variables 
+        condition. Basta con un semaforo binario en 1 
+        (sem puente = 1) que represente el puente y cada cada 
+        proceso auto (Process Auto[id: 1..N]) realiza P(puente)
+        antes de cruzar y V(puente) al salir, garantizando 
+        exclusion mutua
+
+    c.  Ninguna de las dos soluciones respeta el orden de llegada
+
+2.  a.  Procesos:
+        *   Proceso --> N
+       
+        Recurso compartido:
+        *   Motor (BD)
+
+        Monitor (mecanismo de sincronizacion):
+        *   MonitorBaseDeDatos
+
+    b.  Monitor BaseDeDatos {
+            int cantidadConsultas = 5;
+            cond hayLugar;
+
+            Procedure leer() {
+                if (cantidadConsultas == 0) {
+                    wait(hayLugar); 
+                }
+
+                cantidadConsultas --;
+            }
+            
+            Procedure salir() {
+                
+                cantidadConsultas++;
+                signal(hayLugar);
+        }
+
+        Process Proceso [id: 0..N-1] {
+            BaseDeDatos.leer();
+
+            // leer informacion de base de datos
+
+            BaseDeDatos.salir();
+        }
+
+3.  a.  Monitor Fotocopiadora {
+            Fotocopiar();
+        }
+
+        Process Persona[id: 0..N-1] {
+            Fotocopiadora.Fotocopiar();
+        }
+
+    b.  Monitor Fotocopiadora {
+            cond cola;
+            int esperando = 0;
+            bool libre = true;
+
+            Procedure usar() {
+                if (not libre) {
+                    esperando ++;
+                    wait(cola);
+                } else libre = false;
+            }
+
+            Procedure fin() {
+                if (esperando > 0) {
+                    esperando --;
+                    signal(cola);
+
+                }else libre = true;
+            }
+
+        }
+
+        Process Persona[id: 0..N-1] {
+            Fotocopiadora.usar();
+
+            Fotocopiar();
+
+            Fotocopiadora.fin();
+        }
+
+    c.  Monitor Fotocopiadora {
+            bool libre = true;
+            cond espera[N];
+            int idAux, esperando = 0;
+            colaOrdenada fila; // cola ordenada por edad
+
+            Procedure usar(id, edad: in int) {
+                if (not libre) { 
+                    push(fila, id, edad);
+                    esperando ++;
+                    wait(espera[id]);
+
+                } else libre = false;
+            }
+
+            Procedure fin() {
+                if (esperando > 0) {
+                    esperando --;
+                    pop(fila, idAux);
+                    signal(espera[idAux]);
+
+                } else libre = true;
+            }
+        }
+        
+        Process Persona[id: 0..N-1] {
+            int edad = ...;
+
+            Fotocopiadora.usar(id, edad);
+
+            Fotocopiar();
+
+            Fotocopiadora.fin();
+        }
+    
+    d.  Monitor Fotocopiadora {
+            turnoActual = 0;
+            cond espera[N];
+
+            Procedure usar(id: in int) {
+                if (id != turnoActual) {
+                    wait(espera[id]);
+                }
+            }
+
+            Procedure fin() {
+                turnoActual ++;
+
+                if (turnoActual < N) {
+                    signal(espera[turnoActual]);
+                }
+            }
+        }
+
+        Process Persona[id: 0..N-1] {
+            Fotocopiadora.usar(id);
+
+            Fotocopiar();
+
+            Fotocopiadora.fin();
+        }
+    
+    e.  Monitor Fotocopiadora {
+            cond esperaC, hayPersona, finUso;
+
+            int esperando = 0;
+            bool libre = true;
+
+            Procedure proximo() {
+                if (esperando == 0) {
+                    wait(hayPersona);
+                }
+
+                esperando --;
+                libre = false;
+
+                signal(esperaC);  // habilita a una persona
+
+                wait(finUso); // espero a que termine
+                
+
+            }
+
+            Procedure usar() {
+                esperando ++;
+
+                signal(hayPersona);
+                wait(esperaC);
+
+            }
+            
+            Procedure fin() {
+                libre = true;
+                signal(empleado);
+            }
+        }
+
+        Process Empleado {
+            while(true) {
+                Fotocopiadora.proximo();
+            }
+        }
+
+        Process Persona[id: 0..N-1] {
+            Fotocopiadora.usar();
+
+            Fotocopiar();
+
+            Fotocopiadora.fin();
+        }
+
+    f.  Monitor Fotocopiadora {
+            cond esperaC, hayPersona, finUso;
+
+            int esperando = 0, disponibles = 10;
+
+            Procedure proximo() {
+
+                if (esperando == 0) {
+                    wait(hayPersona); // espero a q haya persona
+                }
+
+                if(disponibles == 0) { // espero q se libere fotocopiadora
+                    wait(finUso);
+                }
+
+                esperando --;
+                signal(esperaC);
+            }
+
+            Procedure usar() {
+                esparando ++;
+                signal(hayPersona);
+
+                wait(esperaC);
+
+                disponibles --;
+            }
+
+            Procedure fin() {
+                disponibles ++;
+                signal(finUso);
+            }
+
+        }
+
+        Process Empleado {
+            while(true) {
+                Fotocopiadora.proximo();
+            }
+        }
+
+        Process Persona[id: 0..N-1] {
+            Fotocopiadora.usar();
+
+            Fotocopiar();
+
+            Fotocopiadora.fin();
+        }
+
+4.  a.  Monitor Corralon {
+            cola Cola;
+            text comprobantes[N];
+            cond hayCliente, espera;
+
+            Procedure Llegada(id: in int; lista: in text; C: out text) {
+                push(Cola, (id,lista));
+                signal(hayCliente);
+                wait(espera);
+                C = comprobantes[id];
+            }
+
+            Procedure Atender(id: out int; lista: out text) {
+
+                if (empty(C)) wait(hayCliente); 
+                
+                pop(C, (id, lista));
+            }
+
+            Procedure Finalizar(id: in int; C: in text) {
+                comprobantes[id] = C;
+                signal(espera);
+            }
+        }
+
+        Process Empleado {
+            int id;
+            text lista, comprobante;
+
+            for i = 1..N {
+                Corralon.Atender(id, lista);
+                comprobante = hacerPedido(lista);
+                Corralon.Finalizar(id, comprobante);
+            }
+        }
+
+        Process Cliente[id: 0..N-1] {
+            text listaProductos, comprobante;
+
+            Corralon.Llegada(id, listaProductos, comprobante);
+
+        }
+    
+    b.  Monitor Corralon {
+            cola Cola;
+            text comprobantes[N];
+            cond hayCliente, espera[N];
+
+            Procedure Llegada(id: in int; lista: in text; C: out text) {
+                push(Cola, (id,lista));
+                signal(hayCliente);
+                wait(espera[id]);
+                C = comprobantes[id];
+            }
+
+            Procedure Atender(id: out int; lista: out text) {
+
+                while (empty(C)) wait(hayCliente); 
+                
+                pop(C, (id, lista));
+            }
+
+            Procedure Finalizar(id: in int; C: in text) {
+                comprobantes[id] = C;
+                signal(espera[id]);
+            }
+        }
+
+        Process Empleado[id: 0..E-1] {
+            int id;
+            text lista, comprobante;
+
+            while (true) {
+                Corralon.Atender(id, lista);
+                comprobante = hacerPedido(lista);
+                Corralon.Finalizar(id, comprobante);
+            }
+        }
+
+        Process Cliente {
+            text listaProductos, comprobante;
+
+            Corralon.Llegada(id, listaProductos, comprobante);
+        }
+
+    c.  Monitor Corralon {
+            cola Cola;
+            text comprobantes[N];
+            cond hayCliente, esperarComprobante[N];
+            int totalClientes = N;
+
+            Procedure Llegada(id: in int; lista: in text) {
+                push(Cola, (id, lista));
+                signal(hayCliente);
+            }
+
+            Procedure Atender(id: out int; lista: out text) {
+
+                if (empty(Cola) & totalCientes > 0)  wait(hayCliente)
+
+                else {
+                        if (totalCientes == 0) {
+                            lista = null;
+                            signal_all(hayCliente);
+                        
+                        } else {
+                            totalCientes--;
+                            pop(C, (id, lista));
+
+                        }
+                    
+                    }
+            }
+
+            Procedure Finalizar(id: in int; C: in text) {
+                comprobantes[id] = C;
+                signal(espera[id]);
+
+            }
+
+            Procedure recibirComprobante(id: in int; C: out text) {
+                wait(espera[id]);
+                C = comprobantes[id];
+            }
+        }
+
+        Process Empleado[id: 0..E-1] {
+
+            Corralon.Atender(id, lista);
+            while (lista != null) {
+                
+                text comprobante = hacerPedido(lista);
+                Corralon.Finalizar(id, comprobante);
+                Corralon.Atender(id, lista);
+            }
+        }
+
+        Process Cliente [id: 0..N-1] {
+            text productos, comprobante;
+
+            Corralon.Llegada(id, productos);
+            Corralon.recibirComprobante(id, comprobante);
+        }
+
+5.  
